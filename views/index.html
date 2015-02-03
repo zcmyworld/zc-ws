@@ -11,20 +11,22 @@
 			if('WebSocket' in window){
 				function reconnect(){
 					var t1 = new Date();	
-					console.log(t1)			
 					var socket = new WebSocket('ws://127.0.0.1:4180');
 					socket.onopen = function(event) {
-						socket.send('中文');
+						// var data = "";
+						// for(var i = 0;i<125;i++){
+						// 	data += 1;
+						// }
+						// socket.send(data);
 						socket.onmessage = function(event) {
-							console.log('Client received a message',event);
+							console.log(event.data.length)
 						};
 						socket.onclose = function(event) {
 							var t2 = new Date();
-							console.log(t2)
 							var t = t2 - t1;
 							console.log(t)
-							console.log('Client notified socket has closed',event);
-							reconnect()
+							// console.log('Client notified socket has closed',event);
+							// reconnect()
 						};
 					};
 				}

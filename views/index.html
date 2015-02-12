@@ -20,6 +20,7 @@
 						// console.log(data.length)
 						// var data = 'hello'
 						socket.send(data);
+														
 						socket.onmessage = function(event) {
 							console.log(event.data.length)
 						};

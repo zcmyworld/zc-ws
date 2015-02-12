@@ -30,14 +30,17 @@ function sendfile(filename, callback) {
 		callback(file.toString())
 	})
 }
-var isBig = false;
-var bigData = [];
-var totalLength = 0;
-var nimakey = []
+
 
 var server = http.createServer(function(e) {});
 var crypto = require('crypto');
 server.on('upgrade', function(req, socket, body) {
+
+	var isBig = false;
+	var bigData = [];
+	var totalLength = 0;
+	var maskArr = []
+
 	//建立连接
 	var key = req.headers['sec-websocket-key'];
 	var shasum = crypto.createHash('sha1');
@@ -47,28 +50,34 @@ server.on('upgrade', function(req, socket, body) {
 		'HTTP/1.1 101 Switching Protocols', 'Upgrade: websocket', 'Connection: Upgrade', 'Sec-WebSocket-Accept: ' + key
 	];
 	socket.write(headers.concat('', '').join('\r\n'));
-
-
 	socket.on('data', function(data) {
 		var payloadLen = data[1] & 0x7f;
+		if (data[0].toString(2).slice(4) == 1000) {
+			// console.log('连接断开');
+			return;
+		}
+		// console.log(data.length)
 		if (isBig) {
-			bigData.push(data)
-			if(bigData.length == 2){
-				var hello = Buffer.concat([bigData[0],bigData[1]],totalLength);
-				console.log(hello.length)
-				Payload_data = hello;
-				var mask_key = nimakey[0]
+			var flagLength = 0;
+			if (flagLength < totalLength) {
+				bigData.push(data)
+			}
+			for (var i in bigData) {
+				flagLength += bigData[i].length
+			}
+			if (flagLength == totalLength) {
+				var Payload_data= Buffer.concat(bigData);
+				var mask_key = maskArr[0]
 				for (var i = 0; i < Payload_data.length; i++) {
 					Payload_data[i] = Payload_data[i] ^ mask_key[i % 4];
 				}
-				// console.log(Payload_data.toString())
+				console.log(Payload_data.length)
+				bigData = []
+				isBig = false;
 			}
 			return;
 		}
-		// if (data[0].toString(2).slice(4) == 1000) {
-		// 	console.log('连接断开');
-		// 	return;
-		// }
+		
 		if (payloadLen < 126) {
 			var mask_key = data.slice(2, 6) //获取mask-key
 			var Payload_data = data.slice(6) //获取payload data
@@ -78,48 +87,48 @@ server.on('upgrade', function(req, socket, body) {
 			Payload_data = data.slice(8)
 		}
 		if (payloadLen == 127) {
-			var extendPayloadLen = new Buffer(8)
-			extendPayloadLen[0] = data[2]
-			extendPayloadLen[1] = data[3]
-			extendPayloadLen[2] = data[4]
-			extendPayloadLen[3] = data[5]
-			extendPayloadLen[4] = data[6]
-			extendPayloadLen[5] = data[7]
-			extendPayloadLen[6] = data[8]
-			extendPayloadLen[7] = data[9]
-			var totalLength = parseInt(extendPayloadLen[7].toString())
-			totalLength += parseInt((extendPayloadLen[6] << 8).toString())
-			totalLength += parseInt((extendPayloadLen[5] << 16).toString())
-			totalLength += parseInt((extendPayloadLen[4] << 32).toString())
-			totalLength += parseInt((extendPayloadLen[3] << 64).toString())
-			totalLength += parseInt((extendPayloadLen[2] << 128).toString())
-			totalLength += parseInt((extendPayloadLen[1] << 256).toString())
-			totalLength += parseInt((extendPayloadLen[0] << 512).toString())
+			totalLength = parseTotalLength(data);
 			isBig = true;
 			var mask_key = data.slice(10, 14)
-			nimakey.push(mask_key)
+			maskArr.push(mask_key)
+			bigData.push(data.slice(14))
+			return
 		}
 
-		// console.log(data.length)
-		// for (var i = 0; i < Payload_data.length; i++) {
-		// 	Payload_data[i] = Payload_data[i] ^ mask_key[i % 4];
-		// } //^异或运算符
+		for (var i = 0; i < Payload_data.length; i++) {
+			Payload_data[i] = Payload_data[i] ^ mask_key[i % 4];
+		} //^异或运算符
 		// console.log(Payload_data.toString())
-		// console.log(Payload_data.length)
+		console.log(Payload_data.length)
 	})
 
 	//推送消息
-
 	// setTimeout(function() {
 	var data = "abcdefg:" + new Date().getTime()
 	var data = "";
 	for (var i = 0; i < 75536; i++) {
 		data += 1;
 	};
+	// var data = "hello"
 	send(data, socket)
 });
 
 server.listen(4180);
+
+
+function parseTotalLength(data) {
+	var totalLength = 0 ;
+	totalLength += parseInt(data[9].toString())
+	totalLength += parseInt((data[8] << 8).toString())
+	totalLength += parseInt((data[7] << 16).toString())
+	totalLength += parseInt((data[6] << 32).toString())
+	totalLength += parseInt((data[5] << 64).toString())
+	totalLength += parseInt((data[4] << 128).toString())
+	totalLength += parseInt((data[3] << 256).toString())
+	totalLength += parseInt((data[2] << 512).toString())
+	return totalLength;
+}
+
 
 function send(data, socket) {
 	data = new Buffer(data);

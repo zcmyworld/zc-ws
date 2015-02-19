@@ -1,0 +1,66 @@
+body{
+	margin: 0 auto;
+}
+#hintBox{
+	width: 200px;
+	height: 150px;
+	background-color: rgb(103,183,246);
+	position: fixed;
+	left: 50%;
+	top: 40%;
+	border-radius: 5px;
+	margin-left: -100px;
+	margin-top: -75px;
+	box-shadow: 0px 0px 30px 3px rgb(180,180,180);
+	z-index: 99;
+}
+#hint_title{
+	text-align: center;
+	line-height: 150px;
+	font-size: 20px;
+}
+#myCanvas{
+	position: fixed;
+	left: 10%;
+	top: 10%;
+	border-radius: 5px;
+}
+#userList{
+	width: 200px;
+	background-color: red;
+	height: 90%;
+	position: fixed;
+	right: 30px;
+	margin-top: 30px;
+	border-radius: 10px;
+	background-color: white;
+	box-shadow: 0px 0px 30px 3px rgb(180,180,180);
+}
+
+#userList_header{
+	width: 190px;
+	height: 30px;
+	line-height: 30px;
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
+	padding-left: 10px;
+	border-bottom: 1px solid rgb(10,10,10)
+}
+
+#userList_content{
+
+}
+
+.userList_ele{
+	margin-top: 10px;
+	clear: both;
+}
+
+.ue_userName{
+	cursor: pointer;
+	margin-left: 3px;
+}
+.ue_status{
+	position: absolute;
+	right: 3px;
+}

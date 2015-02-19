@@ -4,16 +4,34 @@ var http = require('http');
 var crypto = require('crypto');
 var Sender = require('./Sender');
 var Receiver = require('./Receiver');
+var fs = require('fs')
+var path = require('path')
 
 function WebSocketServer(options) {
 	EventEmitter.call(this)
 	var self = this;
 	options.port = options.port || 3000;
 	this.server = http.createServer(function(req, res) {
-		var path = req.url;
-		if (url_groups[path]) {
-			url_groups[path](req, res)
+		res.send = function(json){
+			var header = {
+				"Content-Type":"application/json"
+			}
+			res.writeHead(200,header);
+			res.end(JSON.stringify(json));
 		}
+		var url_path = req.url;
+		if (url_groups[url_path]) {
+			url_groups[url_path](req, res)
+			return
+		}
+		if (!self.sendfile(url_path, res)) {
+			return
+		}
+		var header = {
+			'Content-Type': 'text/plain'
+		}
+		res.writeHead(404, header);
+		res.end('404');
 	});
 	this.server.listen(options.port)
 	console.log('server start')
@@ -36,8 +54,51 @@ util.inherits(WebSocketServer, EventEmitter);
 
 var url_groups = {};
 
-WebSocketServer.prototype.urlHandler = function(path, handler) {
-	url_groups[path] = handler
+WebSocketServer.prototype.urlHandler = function(url_path, handler) {
+	url_groups[url_path] = handler
+}
+var mimes = {
+	"css": "text/css",
+	"gif": "image/gif",
+	"html": "text/html",
+	"ico": "image/x-icon",
+	"jpeg": "image/jpeg",
+	"jpg": "image/jpeg",
+	"js": "text/javascript",
+	"json": "application/json",
+	"pdf": "application/pdf",
+	"png": "image/png",
+	"svg": "image/svg+xml",
+	"swf": "application/x-shockwave-flash",
+	"tiff": "image/tiff",
+	"txt": "text/plain",
+	"wav": "audio/x-wav",
+	"wma": "audio/x-ms-wma",
+	"wmv": "video/x-ms-wmv",
+	"xml": "text/xml"
+};
+
+WebSocketServer.prototype.sendfile = function(filename, res) {
+	var url_path = __dirname + '/..' + filename
+	var ext = path.extname(url_path);
+	ext = ext ? ext.slice(1) : 'unknown';
+	var header = {
+		'Content-Type': mimes[ext]
+	}
+	if(ext == 'unknown'){
+		return true;
+	}
+	if (!fs.existsSync(url_path)) {
+		console.log('file not exist');
+		return true;
+	}
+	fs.readFile(url_path, function(err, file) {
+		if (err) {
+			console.log(err)
+		}
+		res.write(file)
+		res.end();
+	})
 }
 
 function establishConnection(req, socket, body) {
@@ -69,7 +130,6 @@ function Handler(req, socket, body, opts) {
 	})
 }
 
-
 util.inherits(Handler, EventEmitter);
 Handler.prototype.send = function(data) {
 	this.sender.send(data)
@@ -77,6 +137,3 @@ Handler.prototype.send = function(data) {
 
 
 module.exports = WebSocketServer;
-
-
-
